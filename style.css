@@ -437,6 +437,18 @@ body.dark-mode .stat-badge {
     color: #ffffff;
 }
 
+.btn-csv {
+    background-color: var(--bg-subtle);
+    color: var(--text-secondary);
+    border: 1px solid var(--border-strong);
+}
+
+.btn-csv:hover {
+    background-color: var(--accent-subtle);
+    color: var(--accent);
+    border-color: var(--accent-border);
+}
+
 .btn-mentees {
     background-color: var(--bg-subtle);
     color: var(--text-primary);
@@ -755,6 +767,21 @@ body.dark-mode .stat-badge {
     font-weight: 600;
     margin-bottom: 0.65rem;
     color: var(--text-primary);
+}
+
+.mentee-list-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 0.65rem;
+}
+
+.mentee-list-header h4 {
+    margin-bottom: 0;
+}
+
+.space-between {
+    justify-content: space-between;
 }
 
 .mentee-form-grid {

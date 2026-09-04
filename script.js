@@ -117,6 +117,9 @@ const menteeNameInput = document.getElementById("menteeName");
 const menteeRollInput = document.getElementById("menteeRoll");
 const menteeSemInput = document.getElementById("menteeSem");
 const menteeEmailInput = document.getElementById("menteeEmail");
+const exportMenteeCsvBtn = document.getElementById("exportMenteeCsvBtn");
+const exportMenteeCsvFooterBtn = document.getElementById("exportMenteeCsvFooterBtn");
+const exportAllCsvBtn = document.getElementById("exportAllCsvBtn");
 
 // Toast Element
 const toast = document.getElementById("toast");
@@ -261,6 +264,25 @@ function setupEventListeners() {
     closeMenteeModalBtn.addEventListener("click", closeMenteeModal);
     closeMenteeModalFooterBtn.addEventListener("click", closeMenteeModal);
     addMenteeForm.addEventListener("submit", handleAddMentee);
+
+    // CSV Export Events
+    if (exportMenteeCsvBtn) {
+        exportMenteeCsvBtn.addEventListener("click", () => {
+            if (currentMenteeMentorIndex !== null) {
+                downloadMentorMenteesCsv(currentMenteeMentorIndex);
+            }
+        });
+    }
+    if (exportMenteeCsvFooterBtn) {
+        exportMenteeCsvFooterBtn.addEventListener("click", () => {
+            if (currentMenteeMentorIndex !== null) {
+                downloadMentorMenteesCsv(currentMenteeMentorIndex);
+            }
+        });
+    }
+    if (exportAllCsvBtn) {
+        exportAllCsvBtn.addEventListener("click", downloadAllMentorsCsv);
+    }
 
     // Close Modals on backdrop click
     window.addEventListener("click", (e) => {
@@ -423,6 +445,9 @@ function renderMentors() {
                 </td>
                 <td class="text-center">
                     <div class="actions-cell">
+                        <button class="btn btn-icon btn-csv" onclick="downloadMentorMenteesCsv(${originalIndex})" title="Download student roster as CSV">
+                            📥 CSV
+                        </button>
                         <button class="btn btn-icon btn-edit" onclick="openEditModal(${originalIndex})" title="Edit Mentor">
                             Edit
                         </button>
@@ -765,6 +790,149 @@ async function handleConfirmDelete() {
 }
 
 /* =========================================================
+   CSV Export Functions
+   ========================================================= */
+
+// Download CSV for a specific mentor's mentees
+window.downloadMentorMenteesCsv = function(mentorIndex) {
+    const mentor = mentors[mentorIndex];
+    if (!mentor) {
+        showToast("Mentor not found", "error");
+        return;
+    }
+
+    const menteeList = mentor.mentees || [];
+    
+    // Header information rows
+    const rows = [
+        ["MARG - Mentorship & Academic Relationship Gateway"],
+        ["Mentor Name", mentor.name],
+        ["Employee ID", mentor.id],
+        ["Department", mentor.department],
+        ["Designation", mentor.designation],
+        ["Capacity Limit", `${mentor.maxMembers} Students`],
+        ["Total Assigned", `${menteeList.length} Students`],
+        ["Export Date", new Date().toLocaleString()],
+        [], // Empty separator line
+        ["Sr No", "Roll Number", "Student Name", "Semester", "Email Address"]
+    ];
+
+    if (menteeList.length === 0) {
+        rows.push(["-", "No students currently assigned", "-", "-", "-"]);
+    } else {
+        menteeList.forEach((m, idx) => {
+            rows.push([
+                idx + 1,
+                m.roll || "",
+                m.name || "",
+                m.sem || "",
+                m.email || ""
+            ]);
+        });
+    }
+
+    const csvContent = formatCsvRows(rows);
+    const sanitizedName = mentor.name.replace(/[^a-zA-Z0-9_-]/g, "_");
+    const filename = `MARG_Mentees_${mentor.id}_${sanitizedName}.csv`;
+
+    exportCsvFile(filename, csvContent);
+    showToast(`Exported student list for ${mentor.name}`);
+};
+
+// Download CSV of all mentors and their assigned mentees
+window.downloadAllMentorsCsv = function() {
+    if (!mentors || mentors.length === 0) {
+        showToast("No mentor records to export.", "error");
+        return;
+    }
+
+    const rows = [
+        ["MARG - Complete Faculty Mentoring & Student Allocation Report"],
+        ["Generated On", new Date().toLocaleString()],
+        ["Total Mentors", mentors.length],
+        [],
+        [
+            "Mentor Employee ID",
+            "Mentor Name",
+            "Department",
+            "Designation",
+            "Max Capacity",
+            "Assigned Count",
+            "Student Roll No",
+            "Student Name",
+            "Student Semester",
+            "Student Email"
+        ]
+    ];
+
+    mentors.forEach(mentor => {
+        const mentees = mentor.mentees || [];
+        if (mentees.length === 0) {
+            rows.push([
+                mentor.id,
+                mentor.name,
+                mentor.department,
+                mentor.designation,
+                mentor.maxMembers,
+                0,
+                "None",
+                "None",
+                "None",
+                "None"
+            ]);
+        } else {
+            mentees.forEach(m => {
+                rows.push([
+                    mentor.id,
+                    mentor.name,
+                    mentor.department,
+                    mentor.designation,
+                    mentor.maxMembers,
+                    mentees.length,
+                    m.roll || "",
+                    m.name || "",
+                    m.sem || "",
+                    m.email || ""
+                ]);
+            });
+        }
+    });
+
+    const csvContent = formatCsvRows(rows);
+    exportCsvFile("MARG_All_Mentors_And_Students.csv", csvContent);
+    showToast("Exported all records as CSV.");
+};
+
+// Helper: Formats 2D array into escaped CSV string with quotes
+function formatCsvRows(rows) {
+    return rows.map(row => 
+        row.map(val => {
+            const str = String(val === undefined || val === null ? "" : val);
+            // If field contains comma, quote, or newline, escape double quotes and wrap in quotes
+            if (str.includes(",") || str.includes("\"") || str.includes("\n") || str.includes("\r")) {
+                return `"${str.replace(/"/g, '""')}"`;
+            }
+            return str;
+        }).join(",")
+    ).join("\r\n");
+}
+
+// Helper: Triggers client-side file download using Blob
+function exportCsvFile(filename, csvContent) {
+    // Add UTF-8 BOM for Excel compatibility
+    const blob = new Blob(["\uFEFF" + csvContent], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.setAttribute("href", url);
+    link.setAttribute("download", filename);
+    link.style.visibility = "hidden";
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+}
+
+/* =========================================================
    Utilities
    ========================================================= */
 function showToast(message, type = "success") {
@@ -792,3 +960,4 @@ function escapeHtml(text) {
         .replace(/"/g, "&quot;")
         .replace(/'/g, "&#039;");
 }
+

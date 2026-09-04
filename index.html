@@ -147,6 +147,9 @@
                         <option value="Civil Engineering">Civil Engineering</option>
                         <option value="Applied Sciences">Applied Sciences</option>
                     </select>
+                    <button type="button" class="btn btn-secondary btn-sm" id="exportAllCsvBtn" title="Export all mentors and mentees as CSV">
+                        Export All CSV
+                    </button>
                 </div>
             </div>
 
@@ -244,7 +247,12 @@
 
             <!-- Mentee List Table Section -->
             <div class="mentee-list-section">
-                <h4>Assigned Students (<span id="menteeTableCount">0</span>)</h4>
+                <div class="mentee-list-header">
+                    <h4>Assigned Students (<span id="menteeTableCount">0</span>)</h4>
+                    <button type="button" class="btn btn-secondary btn-sm" id="exportMenteeCsvBtn" title="Download assigned students as CSV">
+                        📥 Download CSV
+                    </button>
+                </div>
                 <div class="table-responsive">
                     <table class="mentor-table mentee-inner-table">
                         <thead>
@@ -267,7 +275,10 @@
                 </div>
             </div>
 
-            <div class="modal-actions">
+            <div class="modal-actions space-between">
+                <button type="button" class="btn btn-secondary btn-sm" id="exportMenteeCsvFooterBtn">
+                    📥 Download CSV
+                </button>
                 <button type="button" class="btn btn-secondary" id="closeMenteeModalFooterBtn">Close</button>
             </div>
         </div>

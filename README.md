@@ -17,6 +17,7 @@
 
 - **Faculty Mentor Management:** Add, edit, search, filter, and delete faculty mentors with Employee ID, Department, Designation, and Max Student Capacity limits.
 - **Student Mentee Assignment & Allocation:** View assigned student rosters per mentor, track live seat allocation percentages, and add/remove students with duplicate roll number checks.
+- **CSV Export Functionality:** 1-click export of individual mentor student rosters and comprehensive department-wide mentoring reports in Excel-compatible UTF-8 CSV format.
 - **Live Dynamic Metrics:** Top stat counters tracking registered mentors, allocated students, and total mentoring capacity.
 - **Search & Filter:** Instant multi-column search (by name, employee ID, department, designation) and department-level filtering.
 - **Clean Flat UI:** Minimalist, accessible design with zero unnecessary gradients, clean typography (Inter font), and dark/light mode toggle.
