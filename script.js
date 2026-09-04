@@ -1,8 +1,11 @@
 /* =========================================================
-   Mentor-Mentee Management System - JavaScript (Task 1 + Mentee Management)
+   MARG - Mentorship & Academic Relationship Gateway
    ========================================================= */
 
-// Default mock data with 5 sample mentees for every mentor
+// API endpoint configuration
+const API_URL = "api.php";
+
+// Default mock data (used for fallback initialization if offline/static file)
 const DEFAULT_MENTORS = [
     {
         id: "EMP-1001",
@@ -53,12 +56,13 @@ const DEFAULT_MENTORS = [
 
 // Application State
 let mentors = [];
+let isBackendActive = false;
 let deleteCandidateIndex = null;
 let currentMenteeMentorIndex = null;
 let addImageBase64 = "";
 let editImageBase64 = "";
 
-// DOM Elements - Main Form & Table
+// DOM Elements
 const addMentorForm = document.getElementById("addMentorForm");
 const mentorTableBody = document.getElementById("mentorTableBody");
 const emptyState = document.getElementById("emptyState");
@@ -117,48 +121,88 @@ const menteeEmailInput = document.getElementById("menteeEmail");
 // Toast Element
 const toast = document.getElementById("toast");
 
+// Theme Toggle Elements
+const themeToggleBtn = document.getElementById("themeToggleBtn");
+const themeIcon = document.getElementById("themeIcon");
+const themeText = document.getElementById("themeText");
+
 /* =========================================================
    Initialization
    ========================================================= */
 document.addEventListener("DOMContentLoaded", () => {
-    loadMentors();
+    initTheme();
     setupEventListeners();
-    renderMentors();
+    fetchMentors();
 });
 
-// Load from LocalStorage or initialize with default sample data
-function loadMentors() {
+// Theme Management
+function initTheme() {
+    const savedTheme = localStorage.getItem("mentor_system_theme");
+    if (savedTheme === "dark") {
+        applyTheme("dark");
+    } else {
+        applyTheme("light");
+    }
+}
+
+function applyTheme(theme) {
+    if (theme === "dark") {
+        document.body.classList.add("dark-mode");
+        if (themeIcon) themeIcon.textContent = "☀️";
+        if (themeText) themeText.textContent = "Light Mode";
+        localStorage.setItem("mentor_system_theme", "dark");
+    } else {
+        document.body.classList.remove("dark-mode");
+        if (themeIcon) themeIcon.textContent = "🌙";
+        if (themeText) themeText.textContent = "Dark Mode";
+        localStorage.setItem("mentor_system_theme", "light");
+    }
+}
+
+function toggleTheme() {
+    const isDark = document.body.classList.contains("dark-mode");
+    applyTheme(isDark ? "light" : "dark");
+}
+
+/* =========================================================
+   Data Fetching & Backend API Integration
+   ========================================================= */
+async function fetchMentors() {
+    try {
+        const res = await fetch(`${API_URL}?action=get_mentors`);
+        if (res.ok) {
+            const data = await res.json();
+            if (data && data.success && Array.isArray(data.mentors)) {
+                mentors = data.mentors;
+                isBackendActive = true;
+                renderMentors();
+                return;
+            }
+        }
+        throw new Error("PHP backend unreachable or returned invalid response");
+    } catch (err) {
+        console.warn("Using LocalStorage fallback (PHP backend not detected):", err.message);
+        isBackendActive = false;
+        loadLocalMentors();
+        renderMentors();
+    }
+}
+
+function loadLocalMentors() {
     const savedData = localStorage.getItem("mentor_system_records");
     if (savedData) {
         try {
             mentors = JSON.parse(savedData);
-            // Ensure each mentor has at least 5 sample mentees
-            mentors.forEach((m, i) => {
-                if (!Array.isArray(m.mentees) || m.mentees.length === 0) {
-                    m.mentees = (DEFAULT_MENTORS[i] && DEFAULT_MENTORS[i].mentees) 
-                        ? JSON.parse(JSON.stringify(DEFAULT_MENTORS[i].mentees))
-                        : [
-                            { roll: `2024ST${i+1}01`, name: "Student Alpha", sem: "Sem 5 (TE)", email: "alpha@college.edu" },
-                            { roll: `2024ST${i+1}02`, name: "Student Beta", sem: "Sem 5 (TE)", email: "beta@college.edu" },
-                            { roll: `2024ST${i+1}03`, name: "Student Gamma", sem: "Sem 5 (TE)", email: "gamma@college.edu" },
-                            { roll: `2024ST${i+1}04`, name: "Student Delta", sem: "Sem 5 (TE)", email: "delta@college.edu" },
-                            { roll: `2024ST${i+1}05`, name: "Student Epsilon", sem: "Sem 5 (TE)", email: "epsilon@college.edu" }
-                        ];
-                }
-            });
-            saveMentorsToStorage();
         } catch (e) {
-            console.error("Failed to parse localStorage data, using defaults.", e);
             mentors = JSON.parse(JSON.stringify(DEFAULT_MENTORS));
-            saveMentorsToStorage();
         }
     } else {
         mentors = JSON.parse(JSON.stringify(DEFAULT_MENTORS));
-        saveMentorsToStorage();
+        localStorage.setItem("mentor_system_records", JSON.stringify(mentors));
     }
 }
 
-function saveMentorsToStorage() {
+function saveLocalMentors() {
     localStorage.setItem("mentor_system_records", JSON.stringify(mentors));
     updateStats();
 }
@@ -167,6 +211,10 @@ function saveMentorsToStorage() {
    Event Listeners
    ========================================================= */
 function setupEventListeners() {
+    if (themeToggleBtn) {
+        themeToggleBtn.addEventListener("click", toggleTheme);
+    }
+
     // Add Mentor Form Submission
     addMentorForm.addEventListener("submit", handleAddMentor);
 
@@ -214,7 +262,7 @@ function setupEventListeners() {
     closeMenteeModalFooterBtn.addEventListener("click", closeMenteeModal);
     addMenteeForm.addEventListener("submit", handleAddMentee);
 
-    // Close Modals on background click
+    // Close Modals on backdrop click
     window.addEventListener("click", (e) => {
         if (e.target === editModalOverlay) closeEditModal();
         if (e.target === deleteModalOverlay) closeDeleteModal();
@@ -223,12 +271,12 @@ function setupEventListeners() {
 }
 
 /* =========================================================
-   Image Helper (FileReader to Base64)
+   Image Helper
    ========================================================= */
 function handleImageUpload(file, callback) {
     if (!file) return;
     if (!file.type.startsWith("image/")) {
-        showToast("Please upload a valid image file", "error");
+        showToast("Please select a valid image file.", "error");
         return;
     }
     const reader = new FileReader();
@@ -238,7 +286,6 @@ function handleImageUpload(file, callback) {
     reader.readAsDataURL(file);
 }
 
-// Generates fallback avatar with initials or placeholder
 function getAvatarPlaceholder(name) {
     const initials = name
         ? name.split(" ").map(w => w[0]).filter(Boolean).slice(0, 2).join("").toUpperCase()
@@ -247,9 +294,9 @@ function getAvatarPlaceholder(name) {
 }
 
 /* =========================================================
-   2. Add Mentor Handler
+   Add Mentor Handler
    ========================================================= */
-function handleAddMentor(e) {
+async function handleAddMentor(e) {
     e.preventDefault();
 
     const name = document.getElementById("mentorName").value.trim();
@@ -257,51 +304,75 @@ function handleAddMentor(e) {
     const department = document.getElementById("department").value;
     const designation = document.getElementById("designation").value;
     const maxMembers = parseInt(document.getElementById("maxMembers").value, 10);
-
-    // Validation: Check duplicate Employee ID
-    const isDuplicate = mentors.some(m => m.id.toUpperCase() === empId);
-    if (isDuplicate) {
-        showToast(`Employee ID "${empId}" is already assigned to another mentor!`, "error");
-        return;
-    }
+    const profilePic = addImageBase64 || getAvatarPlaceholder(name);
 
     if (maxMembers <= 0) {
-        showToast("Maximum members capacity must be at least 1.", "error");
+        showToast("Student capacity must be at least 1.", "error");
         return;
     }
 
-    const newMentor = {
-        id: empId,
-        name: name,
-        department: department,
-        designation: designation,
-        maxMembers: maxMembers,
-        profilePic: addImageBase64 || getAvatarPlaceholder(name),
-        mentees: []
-    };
+    if (isBackendActive) {
+        try {
+            const res = await fetch(`${API_URL}?action=add_mentor`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    name,
+                    emp_id: empId,
+                    department,
+                    designation,
+                    max_members: maxMembers,
+                    profile_pic: profilePic
+                })
+            });
+            const data = await res.json();
+            if (!res.ok || !data.success) {
+                showToast(data.message || "Failed to add mentor", "error");
+                return;
+            }
+            await fetchMentors();
+        } catch (err) {
+            showToast("Server communication error", "error");
+            return;
+        }
+    } else {
+        const isDuplicate = mentors.some(m => m.id.toUpperCase() === empId);
+        if (isDuplicate) {
+            showToast(`Employee ID ${empId} already exists.`, "error");
+            return;
+        }
 
-    mentors.unshift(newMentor); // Add to the top of the list
-    saveMentorsToStorage();
-    renderMentors();
+        const newMentor = {
+            id: empId,
+            name: name,
+            department: department,
+            designation: designation,
+            maxMembers: maxMembers,
+            profilePic: profilePic,
+            mentees: []
+        };
 
-    // Reset Form
+        mentors.unshift(newMentor);
+        saveLocalMentors();
+        renderMentors();
+    }
+
     addMentorForm.reset();
     addImageBase64 = "";
     addImgPreview.src = "";
     addImgPreview.classList.add("hidden");
     addImgPlaceholder.classList.remove("hidden");
 
-    showToast(`Mentor "${name}" added successfully!`);
+    showToast(`Mentor ${name} added.`);
 }
 
 /* =========================================================
-   3. Render Mentor List Table
+   Render Mentor List Table
    ========================================================= */
 function renderMentors() {
     const searchTerm = searchInput.value.trim().toLowerCase();
     const selectedDept = deptFilter.value;
 
-    // Filter mentors based on search & department
     const filteredMentors = mentors.filter(m => {
         const matchesSearch =
             m.name.toLowerCase().includes(searchTerm) ||
@@ -343,20 +414,20 @@ function renderMentors() {
                 <td>
                     <div class="capacity-container">
                         <span class="mentee-count-badge ${isCapacityFull ? 'full' : ''}">
-                            👥 ${menteeCount} / ${mentor.maxMembers}
+                            ${menteeCount} / ${mentor.maxMembers} students
                         </span>
-                        <button class="btn-mentees" onclick="openMenteeModal(${originalIndex})" title="Manage assigned mentees">
-                            ⚙️ View / Add Mentees
+                        <button class="btn-mentees" onclick="openMenteeModal(${originalIndex})" title="Manage student assignments">
+                            Manage Students
                         </button>
                     </div>
                 </td>
                 <td class="text-center">
                     <div class="actions-cell">
                         <button class="btn btn-icon btn-edit" onclick="openEditModal(${originalIndex})" title="Edit Mentor">
-                            ✏️ Edit
+                            Edit
                         </button>
                         <button class="btn btn-icon btn-delete" onclick="openDeleteModal(${originalIndex})" title="Delete Mentor">
-                            🗑️ Delete
+                            Delete
                         </button>
                     </div>
                 </td>
@@ -385,7 +456,7 @@ function updateStats() {
 }
 
 /* =========================================================
-   Mentee Management Modal (View List & Add Mentee)
+   Mentee Management Modal
    ========================================================= */
 window.openMenteeModal = function(index) {
     const mentor = mentors[index];
@@ -396,8 +467,8 @@ window.openMenteeModal = function(index) {
         mentor.mentees = [];
     }
 
-    menteeModalTitle.textContent = `Mentees for ${mentor.name}`;
-    menteeModalSubtitle.textContent = `${mentor.designation} &bull; ${mentor.department} (${mentor.id})`;
+    menteeModalTitle.textContent = `${mentor.name}`;
+    menteeModalSubtitle.textContent = `${mentor.designation}, ${mentor.department} (${mentor.id})`;
 
     renderMenteeModalDetails();
     menteeModalOverlay.classList.remove("hidden");
@@ -411,7 +482,7 @@ function renderMenteeModalDetails() {
     const max = mentor.maxMembers;
     const percent = Math.min(100, Math.round((menteeCount / max) * 100));
 
-    capacityStatusText.textContent = `Assigned: ${menteeCount} / ${max} Mentees`;
+    capacityStatusText.textContent = `Assigned: ${menteeCount} / ${max} Students`;
     capacityPercentText.textContent = `${percent}% Capacity`;
     capacityProgressBar.style.width = `${percent}%`;
 
@@ -431,14 +502,14 @@ function renderMenteeModalDetails() {
         mentor.mentees.forEach((mentee, mIdx) => {
             const tr = document.createElement("tr");
             tr.innerHTML = `
-                <td><strong>${mIdx + 1}</strong></td>
+                <td>${mIdx + 1}</td>
                 <td><span class="emp-badge">${escapeHtml(mentee.roll)}</span></td>
                 <td><strong>${escapeHtml(mentee.name)}</strong></td>
-                <td><span class="dept-badge" style="background:#f1f5f9;color:#334155;">${escapeHtml(mentee.sem)}</span></td>
+                <td><span class="dept-badge">${escapeHtml(mentee.sem)}</span></td>
                 <td>${escapeHtml(mentee.email)}</td>
                 <td class="text-center">
-                    <button class="btn btn-icon btn-delete" onclick="removeMentee(${mIdx})" title="Remove Mentee">
-                        🗑️ Remove
+                    <button class="btn btn-icon btn-delete" onclick="removeMentee('${mentor.id}', '${escapeHtml(mentee.roll)}', ${mIdx})" title="Remove Student">
+                        Remove
                     </button>
                 </td>
             `;
@@ -447,51 +518,98 @@ function renderMenteeModalDetails() {
     }
 }
 
-function handleAddMentee(e) {
+async function handleAddMentee(e) {
     e.preventDefault();
     if (currentMenteeMentorIndex === null || !mentors[currentMenteeMentorIndex]) return;
 
     const mentor = mentors[currentMenteeMentorIndex];
     if (!mentor.mentees) mentor.mentees = [];
 
-    // Check capacity
-    if (mentor.mentees.length >= mentor.maxMembers) {
-        showToast(`Cannot add mentee! Mentor capacity of ${mentor.maxMembers} is already full.`, "error");
-        return;
-    }
-
     const name = menteeNameInput.value.trim();
     const roll = menteeRollInput.value.trim().toUpperCase();
     const sem = menteeSemInput.value;
     const email = menteeEmailInput.value.trim();
 
-    // Check duplicate roll number across this mentor's mentees
-    const isDuplicate = mentor.mentees.some(m => m.roll.toUpperCase() === roll);
-    if (isDuplicate) {
-        showToast(`Mentee with Roll No "${roll}" is already assigned to this mentor!`, "error");
-        return;
+    if (isBackendActive) {
+        try {
+            const res = await fetch(`${API_URL}?action=add_mentee`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    mentor_emp_id: mentor.id,
+                    roll_no: roll,
+                    name,
+                    sem,
+                    email
+                })
+            });
+            const data = await res.json();
+            if (!res.ok || !data.success) {
+                showToast(data.message || "Failed to assign student", "error");
+                return;
+            }
+            await fetchMentors();
+            renderMenteeModalDetails();
+        } catch (err) {
+            showToast("Server error occurred.", "error");
+            return;
+        }
+    } else {
+        if (mentor.mentees.length >= mentor.maxMembers) {
+            showToast(`Capacity limit reached (${mentor.maxMembers} students maximum).`, "error");
+            return;
+        }
+
+        const isDuplicate = mentor.mentees.some(m => m.roll.toUpperCase() === roll);
+        if (isDuplicate) {
+            showToast(`Student with roll number ${roll} is already assigned to this mentor.`, "error");
+            return;
+        }
+
+        mentor.mentees.push({ roll, name, sem, email });
+        saveLocalMentors();
+        renderMenteeModalDetails();
+        renderMentors();
     }
 
-    mentor.mentees.push({ roll, name, sem, email });
-    saveMentorsToStorage();
-    renderMenteeModalDetails();
-    renderMentors(); // Update background table
-
     addMenteeForm.reset();
-    showToast(`Mentee "${name}" assigned successfully!`);
+    showToast(`Student ${name} assigned.`);
 }
 
-window.removeMentee = function(menteeIndex) {
+window.removeMentee = async function(mentorEmpId, rollNo, menteeIndex) {
     if (currentMenteeMentorIndex === null || !mentors[currentMenteeMentorIndex]) return;
 
-    const mentor = mentors[currentMenteeMentorIndex];
-    if (!mentor.mentees || !mentor.mentees[menteeIndex]) return;
+    if (isBackendActive) {
+        try {
+            const res = await fetch(`${API_URL}?action=delete_mentee`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    mentor_emp_id: mentorEmpId,
+                    roll_no: rollNo
+                })
+            });
+            const data = await res.json();
+            if (!res.ok || !data.success) {
+                showToast(data.message || "Failed to remove student", "error");
+                return;
+            }
+            await fetchMentors();
+            renderMenteeModalDetails();
+            showToast("Student removed.");
+        } catch (err) {
+            showToast("Server error occurred.", "error");
+        }
+    } else {
+        const mentor = mentors[currentMenteeMentorIndex];
+        if (!mentor.mentees || !mentor.mentees[menteeIndex]) return;
 
-    const removed = mentor.mentees.splice(menteeIndex, 1)[0];
-    saveMentorsToStorage();
-    renderMenteeModalDetails();
-    renderMentors();
-    showToast(`Mentee "${removed.name}" removed.`);
+        const removed = mentor.mentees.splice(menteeIndex, 1)[0];
+        saveLocalMentors();
+        renderMenteeModalDetails();
+        renderMentors();
+        showToast(`Student ${removed.name} removed.`);
+    }
 };
 
 function closeMenteeModal() {
@@ -501,7 +619,7 @@ function closeMenteeModal() {
 }
 
 /* =========================================================
-   4. Edit Popup Modal
+   Edit Mentor Modal
    ========================================================= */
 window.openEditModal = function(index) {
     const mentor = mentors[index];
@@ -516,7 +634,7 @@ window.openEditModal = function(index) {
     
     editImageBase64 = mentor.profilePic || "";
     editImgPreview.src = mentor.profilePic || getAvatarPlaceholder(mentor.name);
-    editProfilePicInput.value = ""; // Clear file input
+    editProfilePicInput.value = "";
 
     editModalOverlay.classList.remove("hidden");
 };
@@ -527,58 +645,85 @@ function closeEditModal() {
     editImageBase64 = "";
 }
 
-function handleEditMentorSave(e) {
+async function handleEditMentorSave(e) {
     e.preventDefault();
     const index = parseInt(editMentorIndex.value, 10);
     if (isNaN(index) || !mentors[index]) return;
 
+    const oldEmpId = mentors[index].id;
     const name = editMentorName.value.trim();
     const empId = editEmpId.value.trim().toUpperCase();
     const department = editDepartment.value;
     const designation = editDesignation.value;
     const maxMembers = parseInt(editMaxMembers.value, 10);
-
-    // Validation: Check duplicate Employee ID among other mentors
-    const isDuplicate = mentors.some((m, idx) => idx !== index && m.id.toUpperCase() === empId);
-    if (isDuplicate) {
-        showToast(`Employee ID "${empId}" is already taken by another mentor!`, "error");
-        return;
-    }
+    const profilePic = editImageBase64 || mentors[index].profilePic || getAvatarPlaceholder(name);
 
     if (maxMembers <= 0) {
-        showToast("Maximum members must be greater than 0.", "error");
+        showToast("Student capacity must be greater than 0.", "error");
         return;
     }
 
-    // Preserve existing mentees list
-    const existingMentees = mentors[index].mentees || [];
+    if (isBackendActive) {
+        try {
+            const res = await fetch(`${API_URL}?action=update_mentor`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    old_emp_id: oldEmpId,
+                    emp_id: empId,
+                    name,
+                    department,
+                    designation,
+                    max_members: maxMembers,
+                    profile_pic: profilePic
+                })
+            });
+            const data = await res.json();
+            if (!res.ok || !data.success) {
+                showToast(data.message || "Failed to update mentor", "error");
+                return;
+            }
+            await fetchMentors();
+        } catch (err) {
+            showToast("Server communication error", "error");
+            return;
+        }
+    } else {
+        const isDuplicate = mentors.some((m, idx) => idx !== index && m.id.toUpperCase() === empId);
+        if (isDuplicate) {
+            showToast(`Employee ID ${empId} is already in use.`, "error");
+            return;
+        }
 
-    // Update object
-    mentors[index] = {
-        id: empId,
-        name: name,
-        department: department,
-        designation: designation,
-        maxMembers: maxMembers,
-        profilePic: editImageBase64 || mentors[index].profilePic || getAvatarPlaceholder(name),
-        mentees: existingMentees
-    };
+        const existingMentees = mentors[index].mentees || [];
 
-    saveMentorsToStorage();
-    renderMentors();
+        mentors[index] = {
+            id: empId,
+            name: name,
+            department: department,
+            designation: designation,
+            maxMembers: maxMembers,
+            profilePic: profilePic,
+            mentees: existingMentees
+        };
+
+        saveLocalMentors();
+        renderMentors();
+    }
+
     closeEditModal();
-    showToast(`Mentor record for "${name}" updated successfully!`);
+    showToast(`Mentor ${name} updated.`);
 }
 
 /* =========================================================
-   5. Delete Entry Popup & Logic
+   Delete Mentor Modal
    ========================================================= */
 window.openDeleteModal = function(index) {
     const mentor = mentors[index];
     if (!mentor) return;
 
     deleteCandidateIndex = index;
-    deleteModalMessage.innerHTML = `Are you sure you want to delete <strong>"${escapeHtml(mentor.name)}"</strong> (${escapeHtml(mentor.id)}) and all their assigned mentees?`;
+    deleteModalMessage.innerHTML = `Are you sure you want to delete <strong>${escapeHtml(mentor.name)}</strong> (${escapeHtml(mentor.id)}) and all assigned student records?`;
     deleteModalOverlay.classList.remove("hidden");
 };
 
@@ -587,14 +732,36 @@ function closeDeleteModal() {
     deleteCandidateIndex = null;
 }
 
-function handleConfirmDelete() {
+async function handleConfirmDelete() {
     if (deleteCandidateIndex === null || !mentors[deleteCandidateIndex]) return;
 
-    const deletedMentor = mentors.splice(deleteCandidateIndex, 1)[0];
-    saveMentorsToStorage();
-    renderMentors();
+    const deletedMentor = mentors[deleteCandidateIndex];
+
+    if (isBackendActive) {
+        try {
+            const res = await fetch(`${API_URL}?action=delete_mentor`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ emp_id: deletedMentor.id })
+            });
+            const data = await res.json();
+            if (!res.ok || !data.success) {
+                showToast(data.message || "Failed to delete mentor", "error");
+                return;
+            }
+            await fetchMentors();
+        } catch (err) {
+            showToast("Server communication error", "error");
+            return;
+        }
+    } else {
+        mentors.splice(deleteCandidateIndex, 1);
+        saveLocalMentors();
+        renderMentors();
+    }
+
     closeDeleteModal();
-    showToast(`Mentor "${deletedMentor.name}" was removed successfully.`);
+    showToast(`Mentor ${deletedMentor.name} deleted.`);
 }
 
 /* =========================================================
@@ -603,15 +770,17 @@ function handleConfirmDelete() {
 function showToast(message, type = "success") {
     toast.textContent = message;
     if (type === "error") {
-        toast.style.backgroundColor = "#ef4444";
+        toast.style.backgroundColor = "#dc2626";
+        toast.style.borderColor = "#b91c1c";
     } else {
         toast.style.backgroundColor = "#0f172a";
+        toast.style.borderColor = "#334155";
     }
     toast.classList.remove("hidden");
 
     setTimeout(() => {
         toast.classList.add("hidden");
-    }, 3200);
+    }, 3000);
 }
 
 function escapeHtml(text) {
