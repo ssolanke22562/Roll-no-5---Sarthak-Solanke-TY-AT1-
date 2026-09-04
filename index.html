@@ -1,0 +1,368 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mentor-Mentee Management System | Task 1</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+    <!-- 1. Top Bar -->
+    <header class="top-bar">
+        <div class="top-bar-container">
+            <div class="brand">
+                <div class="brand-icon">🎓</div>
+                <div class="brand-text">
+                    <h1>Mentor-Mentee Management System</h1>
+                    <span class="sub-title">College Academic Portal &bull; Mentor Directory</span>
+                </div>
+            </div>
+            <div class="top-stats">
+                <div class="stat-badge">
+                    <span class="stat-label">Total Mentors</span>
+                    <span class="stat-value" id="totalMentorCount">0</span>
+                </div>
+                <div class="stat-badge">
+                    <span class="stat-label">Total Mentees</span>
+                    <span class="stat-value" id="totalMenteeCount">0</span>
+                </div>
+                <div class="stat-badge">
+                    <span class="stat-label">Total Capacity</span>
+                    <span class="stat-value" id="totalCapacityCount">0</span>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Container -->
+    <main class="main-container">
+        
+        <!-- Left / Top Column: Add Mentor Form -->
+        <section class="card form-card">
+            <div class="card-header">
+                <div class="header-icon">➕</div>
+                <div>
+                    <h2>Add New Mentor</h2>
+                    <p>Enter mentor credentials and capacity details</p>
+                </div>
+            </div>
+
+            <form id="addMentorForm" autocomplete="off">
+                <div class="form-grid">
+                    <!-- Mentor Name -->
+                    <div class="form-group">
+                        <label for="mentorName">Mentor Name <span class="required">*</span></label>
+                        <input type="text" id="mentorName" placeholder="e.g. Dr. Rajesh Sharma" required>
+                    </div>
+
+                    <!-- Employee ID -->
+                    <div class="form-group">
+                        <label for="empId">Employee ID <span class="required">*</span></label>
+                        <input type="text" id="empId" placeholder="e.g. EMP-1042" required>
+                    </div>
+
+                    <!-- Department -->
+                    <div class="form-group">
+                        <label for="department">Department <span class="required">*</span></label>
+                        <select id="department" required>
+                            <option value="" disabled selected>Select Department</option>
+                            <option value="Computer Engineering">Computer Engineering</option>
+                            <option value="Information Technology">Information Technology</option>
+                            <option value="Electronics & Telecom">Electronics & Telecom</option>
+                            <option value="Mechanical Engineering">Mechanical Engineering</option>
+                            <option value="Electrical Engineering">Electrical Engineering</option>
+                            <option value="Civil Engineering">Civil Engineering</option>
+                            <option value="Applied Sciences">Applied Sciences</option>
+                        </select>
+                    </div>
+
+                    <!-- Designation -->
+                    <div class="form-group">
+                        <label for="designation">Designation <span class="required">*</span></label>
+                        <select id="designation" required>
+                            <option value="" disabled selected>Select Designation</option>
+                            <option value="Professor & Head">Professor & Head</option>
+                            <option value="Professor">Professor</option>
+                            <option value="Associate Professor">Associate Professor</option>
+                            <option value="Assistant Professor">Assistant Professor</option>
+                            <option value="Lecturer">Lecturer</option>
+                        </select>
+                    </div>
+
+                    <!-- Maximum Members -->
+                    <div class="form-group">
+                        <label for="maxMembers">Maximum Members / Mentees <span class="required">*</span></label>
+                        <input type="number" id="maxMembers" min="1" max="100" placeholder="e.g. 15" required>
+                    </div>
+
+                    <!-- Profile Pic Upload -->
+                    <div class="form-group">
+                        <label for="profilePicInput">Profile Picture</label>
+                        <div class="file-input-wrapper">
+                            <input type="file" id="profilePicInput" accept="image/*">
+                            <div class="image-preview-container" id="addImgPreviewContainer">
+                                <img id="addImgPreview" src="" alt="Preview" class="hidden">
+                                <span id="addImgPlaceholder" class="preview-placeholder">No image chosen (default avatar used)</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="form-actions">
+                    <button type="reset" class="btn btn-secondary" id="resetBtn">Reset Form</button>
+                    <button type="submit" class="btn btn-primary">Add Mentor Record</button>
+                </div>
+            </form>
+        </section>
+
+        <!-- Right / Bottom Column: Mentor List Table -->
+        <section class="card table-card">
+            <div class="card-header table-header-flex">
+                <div class="header-left">
+                    <div class="header-icon">📋</div>
+                    <div>
+                        <h2>Registered Mentors Directory</h2>
+                        <p>View, manage, edit and delete mentor records</p>
+                    </div>
+                </div>
+                <!-- Search and Filter Bar -->
+                <div class="table-controls">
+                    <div class="search-box">
+                        <input type="text" id="searchInput" placeholder="Search by name, ID, or dept...">
+                    </div>
+                    <select id="deptFilter">
+                        <option value="ALL">All Departments</option>
+                        <option value="Computer Engineering">Computer Engineering</option>
+                        <option value="Information Technology">Information Technology</option>
+                        <option value="Electronics & Telecom">Electronics & Telecom</option>
+                        <option value="Mechanical Engineering">Mechanical Engineering</option>
+                        <option value="Electrical Engineering">Electrical Engineering</option>
+                        <option value="Civil Engineering">Civil Engineering</option>
+                        <option value="Applied Sciences">Applied Sciences</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="table-responsive">
+                <table class="mentor-table" id="mentorTable">
+                    <thead>
+                        <tr>
+                            <th>Profile</th>
+                            <th>Mentor Name</th>
+                            <th>Employee ID</th>
+                            <th>Department</th>
+                            <th>Designation</th>
+                            <th>Mentees / Capacity</th>
+                            <th class="text-center">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="mentorTableBody">
+                        <!-- Dynamic Mentor Rows will be rendered here -->
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Empty State -->
+            <div class="empty-state hidden" id="emptyState">
+                <div class="empty-icon">📂</div>
+                <h3>No Mentor Records Found</h3>
+                <p>Fill out the form above to add your first mentor to the directory.</p>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- Mentee Management Modal (View List & Add Mentee) -->
+    <div class="modal-overlay hidden" id="menteeModalOverlay">
+        <div class="modal-content mentee-modal-content">
+            <div class="modal-header">
+                <div class="modal-title">
+                    <span class="modal-icon">👥</span>
+                    <div>
+                        <h3 id="menteeModalTitle">Manage Mentees</h3>
+                        <p class="modal-subtitle" id="menteeModalSubtitle">Mentor details</p>
+                    </div>
+                </div>
+                <button class="close-modal-btn" id="closeMenteeModalBtn" title="Close">&times;</button>
+            </div>
+
+            <!-- Capacity Progress Bar -->
+            <div class="capacity-overview">
+                <div class="capacity-header">
+                    <span id="capacityStatusText">Capacity: 5 / 20 Mentees</span>
+                    <span id="capacityPercentText">25% Full</span>
+                </div>
+                <div class="progress-bar-bg">
+                    <div class="progress-bar-fill" id="capacityProgressBar" style="width: 25%;"></div>
+                </div>
+            </div>
+
+            <!-- Add Mentee Form Inside Modal -->
+            <div class="mentee-form-section">
+                <h4>➕ Add New Mentee to this Mentor</h4>
+                <form id="addMenteeForm" autocomplete="off">
+                    <div class="mentee-form-grid">
+                        <div class="form-group">
+                            <label for="menteeName">Student Name <span class="required">*</span></label>
+                            <input type="text" id="menteeName" placeholder="e.g. Aarav Sharma" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="menteeRoll">Roll No / PRN <span class="required">*</span></label>
+                            <input type="text" id="menteeRoll" placeholder="e.g. 2024CE101" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="menteeSem">Year / Sem <span class="required">*</span></label>
+                            <select id="menteeSem" required>
+                                <option value="" disabled selected>Select Semester</option>
+                                <option value="Sem 1 (FE)">Sem 1 (FE)</option>
+                                <option value="Sem 2 (FE)">Sem 2 (FE)</option>
+                                <option value="Sem 3 (SE)">Sem 3 (SE)</option>
+                                <option value="Sem 4 (SE)">Sem 4 (SE)</option>
+                                <option value="Sem 5 (TE)" selected>Sem 5 (TE)</option>
+                                <option value="Sem 6 (TE)">Sem 6 (TE)</option>
+                                <option value="Sem 7 (BE)">Sem 7 (BE)</option>
+                                <option value="Sem 8 (BE)">Sem 8 (BE)</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="menteeEmail">Student Email <span class="required">*</span></label>
+                            <input type="email" id="menteeEmail" placeholder="e.g. aarav@college.edu" required>
+                        </div>
+                    </div>
+                    <div class="form-actions-inline">
+                        <button type="submit" class="btn btn-primary btn-sm" id="submitMenteeBtn">
+                            ➕ Assign Mentee
+                        </button>
+                    </div>
+                </form>
+            </div>
+
+            <!-- Mentee List Table Section -->
+            <div class="mentee-list-section">
+                <h4>📋 Assigned Mentees List (<span id="menteeTableCount">0</span>)</h4>
+                <div class="table-responsive">
+                    <table class="mentor-table mentee-inner-table">
+                        <thead>
+                            <tr>
+                                <th>#</th>
+                                <th>Roll No</th>
+                                <th>Student Name</th>
+                                <th>Semester</th>
+                                <th>Email</th>
+                                <th class="text-center">Action</th>
+                            </tr>
+                        </thead>
+                        <tbody id="menteeTableBody">
+                            <!-- Dynamic mentee rows -->
+                        </tbody>
+                    </table>
+                </div>
+                <div class="empty-state hidden" id="menteeEmptyState" style="padding: 1.5rem;">
+                    <p>No mentees assigned to this mentor yet.</p>
+                </div>
+            </div>
+
+            <div class="modal-actions">
+                <button type="button" class="btn btn-secondary" id="closeMenteeModalFooterBtn">Close</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 4. Edit Popup Modal -->
+    <div class="modal-overlay hidden" id="editModalOverlay">
+        <div class="modal-content">
+            <div class="modal-header">
+                <div class="modal-title">
+                    <span class="modal-icon">✏️</span>
+                    <h3>Edit Mentor Details</h3>
+                </div>
+                <button class="close-modal-btn" id="closeEditModalBtn" title="Close">&times;</button>
+            </div>
+
+            <form id="editMentorForm">
+                <input type="hidden" id="editMentorIndex">
+
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label for="editMentorName">Mentor Name <span class="required">*</span></label>
+                        <input type="text" id="editMentorName" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="editEmpId">Employee ID <span class="required">*</span></label>
+                        <input type="text" id="editEmpId" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="editDepartment">Department <span class="required">*</span></label>
+                        <select id="editDepartment" required>
+                            <option value="Computer Engineering">Computer Engineering</option>
+                            <option value="Information Technology">Information Technology</option>
+                            <option value="Electronics & Telecom">Electronics & Telecom</option>
+                            <option value="Mechanical Engineering">Mechanical Engineering</option>
+                            <option value="Electrical Engineering">Electrical Engineering</option>
+                            <option value="Civil Engineering">Civil Engineering</option>
+                            <option value="Applied Sciences">Applied Sciences</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="editDesignation">Designation <span class="required">*</span></label>
+                        <select id="editDesignation" required>
+                            <option value="Professor & Head">Professor & Head</option>
+                            <option value="Professor">Professor</option>
+                            <option value="Associate Professor">Associate Professor</option>
+                            <option value="Assistant Professor">Assistant Professor</option>
+                            <option value="Lecturer">Lecturer</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="editMaxMembers">Maximum Members / Mentees <span class="required">*</span></label>
+                        <input type="number" id="editMaxMembers" min="1" max="100" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="editProfilePicInput">Update Profile Picture</label>
+                        <div class="file-input-wrapper">
+                            <input type="file" id="editProfilePicInput" accept="image/*">
+                            <div class="image-preview-container">
+                                <img id="editImgPreview" src="" alt="Preview" class="avatar-preview">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="modal-actions">
+                    <button type="button" class="btn btn-secondary" id="cancelEditBtn">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Save Changes</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- 5. Delete Confirmation Modal -->
+    <div class="modal-overlay hidden" id="deleteModalOverlay">
+        <div class="modal-content delete-modal-content">
+            <div class="delete-icon-wrapper">
+                <span class="delete-icon">🗑️</span>
+            </div>
+            <h3>Confirm Deletion</h3>
+            <p id="deleteModalMessage">Are you sure you want to delete this mentor record? This action cannot be undone.</p>
+            <div class="modal-actions justify-center">
+                <button type="button" class="btn btn-secondary" id="cancelDeleteBtn">Cancel</button>
+                <button type="button" class="btn btn-danger" id="confirmDeleteBtn">Delete Record</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Notification Toast -->
+    <div id="toast" class="toast hidden"></div>
+
+    <script src="script.js"></script>
+</body>
+</html>
